@@ -1,0 +1,23 @@
+{% extends 'layout.html' %}
+{% block content %}
+    <div class="span6">
+        <fieldset>
+            <legend>注册</legend>
+            <form action="{% url 'hwamei:check_register' %}" method="post">
+                {% csrf_token %}
+                {% if error %}<p class="alert alert-error">{{ error }}</p>{% endif %}
+                <p><span>用户名</span>
+                    <input type="text" name="username" placeholder="用户名"/>
+                </p>
+                <p><span>密码</span>
+                    <input type="password" name="passw" placeholder="密码"/>
+                </p>
+                <p>
+                    <input type="submit" value="注册" class="btn btn-success"/>
+                    <a href="{% url 'hwamei:index' %}" class="btn">返回首页</a>
+                </p>
+
+            </form>
+        </fieldset>
+    </div>
+{% endblock %}

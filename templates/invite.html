@@ -1,0 +1,62 @@
+{% extends 'layout.html' %}
+{% block content %}
+    <div class="span8">
+        <form action="{% url 'hwamei:create_ws' %}" method="post">
+            {% csrf_token %}
+            <fieldset>
+                <legend>工作组名</legend>
+                <input type="text" id="ws_name" name="ws_name" placeholder="请输入工作组名称"/>
+            </fieldset>
+            <p class="alert alert-error hide" id="result_info"></p>
+            <fieldset>
+                <legend>搜索用户</legend>
+                <p>
+                    <input type="text" id="find_member" placeholder="请输入要查找的用户名"/>
+                    <button class="btn btn-info btn-small" id="send_invite">添加></button>
+                </p>
+
+                <select name="members" id="members" multiple="multiple" style="height:200px;">
+                </select>
+            </fieldset>
+            <input type="hidden" id="ws_data" name="ws_data"/>
+        </form>
+        <a class="btn" href="#" id="create_ws">创建工作组</a>
+    </div>
+    <script type="text/javascript">
+        $(function () {
+            var member_list = ["{{ user.name }}"];
+            var result = $('#result_info');
+            $('#send_invite').on('click', function (e){
+                e.preventDefault();
+                var member = $('#find_member').val();
+                for(var mem in member_list){
+                    if (member_list[mem] == member){
+                        result.text("'"+ member + "'已添加，不可重复");
+                        result.show();
+                        return;
+                    }
+                }
+                $.get('/hwamei/add_member/' + member, function (data){
+                    if (data == "success"){
+                        $('#members').append('<option value="'+ member +'">' + member + '</option>');
+                        result.val("");
+                        result.hide();
+                        member_list.push(member);
+                    } else {
+                        result.text(data);
+                        result.show();
+                    }
+                });
+            });
+            $('#create_ws').on('click', function (e){
+                var ws_name = $("#ws_name").val();
+                if (ws_name === "") {
+                    result.text("工作组名不能为空");
+                    result.show();
+                }
+                $('#ws_data').val(JSON.stringify(member_list))
+                $("form").submit();
+            });
+        });
+    </script>
+{% endblock %}

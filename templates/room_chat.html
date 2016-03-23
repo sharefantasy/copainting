@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+</head>
+<body>
+<input type="text" id="room"/>
+<button id="chgroom">change room</button>
+<input type="text" id='user'/>
+<textarea name="" id="chat" cols="30" rows="10"></textarea>
+<input id="input" type="text"/>
+<button id="send">send</button>
+</body>
+<script src="http://localhost:4000/socket.io/socket.io.js"></script>
+<script type="text/javascript">
+    var $ = function (query){
+                return document.querySelector(query);
+            },
+        chat = io.connect('http://localhost',{port:4000}),
+        roomid = '2';
+
+    chat.on('connect',function (){
+        chat.emit('join room',roomid,function (result){
+            console.log("join room" + roomid);
+        });
+
+
+        $("#room").value = roomid;
+
+        chat.on('message', function (message){
+            $("#chat").value += message + "\n";//message.user + " : " + message.content;
+        });
+        $("#send").addEventListener('click', function (e){
+            var msg = $('#input').value,
+                user = $("#user").value;
+            chat.send(user + " : " + msg);
+            $("#chat").value += user + " : " + msg;
+        });
+        chat.on('new commer', function (){
+           console.log("newer");
+        });
+        $("#chgroom").addEventListener('click', function(e){
+            chat.emit('leave room',roomid);
+            chat.emit('join room', $("#room").value, function (){
+                console.log("to new room");
+            });
+            $("#chat").value += "join room " + $("#room").value + "\n";
+        });
+        //$("room").value = "join room failed" + roominfo.msg + "\n";
+
+
+
+    });
+</script>
+</html>

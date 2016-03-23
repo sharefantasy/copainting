@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    {% load staticfiles %}
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+    <script type="text/javascript" src="http://{{ serverIP }}:{{ port }}/socket.io/socket.io.js"></script>
+</head>
+<body>
+<textarea name="chat" id="achat" cols="50" rows="10"></textarea>
+<input id="sendchat" type="text" size="50"/>
+<button id="chat">send chat</button>
+<button id="leave">leave room</button>
+<textarea name="users" id="users" cols="30" rows="10"></textarea>
+
+</body>
+<script type="text/javascript">
+    var port = {{ port }};
+    var path = "index";
+    var configure = {
+        'worksp': "{{ workspace }}",
+        'user': "{{ user_name }}",
+        'content': 'configure'
+    };
+    var content_parse = function (content){
+        return content;
+    };
+    $(document).ready(function (){
+
+        var socket = io.connect(window.location.hostname,{'port':port});
+        socket.on('connect', function (){
+            console.log('connect to server');
+        });
+        socket.emit(path + ":join_ws", JSON.stringify(configure));
+
+
+        var users = [];
+        socket.on(path + ':user_join', function (data){
+            var msg = JSON.parse(data);
+            users.push(msg.content.user);
+            var userN = $('#users').val("");
+            var usertext = "";
+            for (var u in users){
+                usertext += users[u] + '\n';
+            }
+            userN.val(usertext);
+            $('#achat').val($('achat').val()+"added user " +msg.content.user);
+        });
+        socket.on(path + ':user_leave',function (data){
+            var msg = JSON.parse(data);
+            console.log(msg.content.user);
+        });
+        $('#leave').on('click', function (e){
+
+            socket.emit(path + ':leave_ws', JSON.stringify(configure));
+        });
+
+
+        $('#chat').on('click', function (e){
+            var msg = {
+                'user': configure.user,
+                'worksp': configure.worksp,
+                'content': $("#sendchat").val()
+            };
+            socket.emit(path + ':send_chat',JSON.stringify(msg));
+        });
+        msglist = "";
+        socket.on(path + ':rcv_chat', function (data){
+            var msg = JSON.parse(data);
+            msglist += msg.user + ": " + content_parse(msg.content) + "\n";
+            $('#achat').val(msglist);
+        });
+    })
+</script>
+</html>

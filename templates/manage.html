@@ -1,0 +1,34 @@
+{% extends 'layout.html' %}
+{% block content %}
+    <div class="span6">
+    <fieldset>
+        <legend>工作组管理 <small class="pull-right">{{ user.name }}/<a href="{% url 'hwamei:logout' %}">登出</a></small></legend>
+        <a href="{% url 'hwamei:invite' %}">创建</a>
+        <table class="table table-striped table-hover">
+            <tbody>
+                <tr>
+                    <th>#</th>
+                    <th>工作组编号</th>
+                    <th>工作组</th>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>2</td>
+                    <td>3</td></tr>
+                {% for workspace in workspaces %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ workspace.id }}</td>
+                    <td><a href="{% url 'hwamei:main' workspace.id %}">{{ workspace.name }}</a></td>
+
+                    {% ifequal workspace.author user.id %}
+                        <td><a href="#" class="remove-ws" value="{{ workspace.id }}">删除</a></td>
+                    {% endifequal %}
+                </tr>
+            {% endfor %}
+            </tbody>
+
+        </table>
+    </fieldset>
+</div>
+{% endblock %}

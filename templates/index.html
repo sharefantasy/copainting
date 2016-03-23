@@ -1,0 +1,29 @@
+{% extends 'layout.html' %}
+{% block content %}
+    {% load staticfiles %}
+    <img src="{% static 'img/bird.png' %}" alt="画眉" style="top:30px;position: relative;"/>
+    <div class="span6" style="top: 30px">
+        <div id="loginform">
+            <form action="{% url 'hwamei:manage' %}" method="post">
+                {% csrf_token %}
+                <fieldset>
+                    <span id="title" class="pull-right">畫眉</span>
+                    <legend>  </legend>
+                    <div class="span4 offset1">
+                        {% if error %}<p class="alert alert-error">{{ error }}</p>{% endif %}
+                        <p><label>用户名</label><input type="text" name="username" class="span4"/></p>
+                        <p><label>密码</label><input type="text" name="passw" class="span4"/></p>
+                        <div style="position: relative;left: 20px;">
+                            <input type="submit" class="btn btn-warning span2" value="登录" style="margin: 2px;position: relative;"/>
+                            <a href="{% url 'hwamei:register' %}" class="btn" style="margin: 2px;position: relative;">注册</a>
+                        </div>
+                    </div>
+                </fieldset>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+{% load staticfiles %}
+{% block css %}
+    <link rel="stylesheet" href="{% static 'css/index.css' %}"/>
+{% endblock %}

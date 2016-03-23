@@ -1,0 +1,187 @@
+{% extends 'layout.html' %}
+{% load staticfiles %}
+{% block left_side %}
+    <div class="well " style="top: 50px;">
+        <div style="left: 20px;position: relative;" class="tools" >
+            <img src="{% static 'img/pen.jpg' %}" alt="钢笔" id="pen" class="tool tools-clicked"/>
+{#            <img src="{% static 'img/pencil.jpg' %}" alt="铅笔"/>#}
+            <img src="{% static 'img/eraser.jpg' %}" alt="橡皮" id="eraser" class="tool" />
+        </div>
+    </div>
+    <div class="well">
+        <div style="left: 20px;position: relative;" class="colors" >
+            <div class="color" style="background-color: red;" value="[255,0,0,255]"></div>
+            <div class="color" style="background-color: green;" value="[0,255,0,255]">&nbsp;&nbsp;&nbsp;&nbsp;</div>
+            <div class="color" style="background-color: blue;" value="[0,0,255,255]">&nbsp;&nbsp;&nbsp;&nbsp;</div>
+            <div class="color color-clicked" style="background-color: #000000" value="[0,0,0,255]">&nbsp;&nbsp;&nbsp;&nbsp;</div>
+        </div>
+    </div>
+    <div class="span3" style="height: 100px;position: relative;top: 180px;left: -60px;">
+        <p style="font-size: 40px;">畫</p><br>
+        <p style="font-size: 40px;">眉</p>
+    </div>
+{% endblock %}
+{% block content %}
+    <div style="background-color: ivory;border: solid;top: -30px;position: relative;width: 600px;">
+        <canvas id="cp" width="600" height="512" ></canvas>
+    </div>
+{% endblock %}
+{% block right_side %}
+    <div class="span3" style="position: relative;" style="top: -50px;">
+        <div style="position: relative;float: left;height: 170px;" class="well well-large">
+        <p>{{ user.name }}/<a href="{% url 'hwamei:logout' %}">登出</a></p>
+            <fieldset>
+                <legend>工作组成员</legend>
+                <select name="" id="" multiple="multiple">
+                    {% for member in workspace.members.all %}
+                        <option value="">{{ member.name }}</option>
+                    {% endfor %}
+                </select>
+            </fieldset>
+        </div>
+        <div class="well well-large span3" style="position: relative;float: left;left: -20px;">
+            <textarea id="chat_window" cols="30" rows="10" class="disabled"></textarea>
+            <input type="text" id="chat_msg" placeholder="请输入聊天内容"/>
+            <button id="send_chat" class="btn-primary ">发送</button>
+        </div>
+    </div>
+{% endblock %}
+
+{% block css %}
+    <link rel="stylesheet" href="{% static 'css/main.css' %}"/>
+{% endblock %}
+{% block js %}
+    <script type="text/javascript" src="http://{{ serverIP }}:{{ port }}/socket.io/socket.io.js"></script>
+    <script type="text/javascript" src="{% static 'js/realtime_canvas.js' %}"></script>
+    <script type="text/javascript">
+
+    var port = {{ port }};
+    var path = "index";
+    var configure = {
+        'worksp': "{{ workspace.id }}",
+        'user': "{{ user.name }}",
+        'content': 'configure'
+    };
+
+    var content_parse = function (content){
+        return content;
+    };
+
+    var socket = io.connect(window.location.hostname,{'port':port});
+    socket.on('connect', function (){
+        console.log('connect to server');
+    });
+
+    socket.emit(path + ":join_ws", JSON.stringify(configure));
+
+
+    var users = [];
+    var chat_update = function (){
+        var msglist = "";
+        return function(msg){
+            msglist += msg + "\n";
+            $('#chat_window').val(msglist);
+        }
+
+    }();
+    var MemberManager = function (){
+        var members = {};
+        return function (){
+            this.add = function (member){
+                if (members.indexOf(member) == -1){
+                    members.push(member)
+                }
+            };
+            this.leave = function (member){
+                var index = member.indexof(member);
+                if (index != -1){
+                    members.remove(index)
+                }
+            };
+            this.getMembers = function (){
+                return members;
+            }
+        }
+    }();
+    var manager = new MemberManager();
+    socket.on(path + ':user_join', function (data){
+        var msg = JSON.parse(data);
+        manager.add(msg.content.user);
+        // TODO: get user management together
+
+        users.push(msg.content.user);
+        var userN = $('#users').val("");
+        var usertext = "";
+        for (var u in users){
+            usertext += users[u] + '\n';
+        }
+        userN.val(usertext);
+        chat_update("added user " +msg.content.user);
+    });
+
+    socket.on(path + ':user_leave',function (data){
+        var msg = JSON.parse(data);
+        manager.leave(msg.content.user)
+        chat_update("leave user: " + msg.content.user)
+    });
+
+    $('#leave').on('click', function (e){
+        socket.emit(path + ':leave_ws', JSON.stringify(configure));
+    });
+
+
+    $('#send_chat').on('click', function (e){
+        var chat_msg = $("#chat_msg");
+        var msg = {
+            'user': configure.user,
+            'worksp': configure.worksp,
+            'content': chat_msg.val()
+        };
+        chat_update(configure.user +": "+ chat_msg.val());
+        chat_msg.val('');
+        socket.emit(path + ':send_chat',JSON.stringify(msg));
+    });
+
+    socket.on(path + ':rcv_chat', function (data){
+        var msg = JSON.parse(data);
+        chat_update(msg.user + ": " + content_parse(msg.content));
+    });
+
+    var cp = CanvasPlane(document.getElementById('cp'));
+    socket.on(path + ':rcv_draw', function (data){
+        var msg = JSON.parse(data);
+        if (VerifyDrawData(msg.content)){
+            cp.Append(msg.content);
+        }
+    });
+    cp.OnNewDraw = function (data){
+        var msg = {
+            'user': configure.user,
+            'worksp': configure.worksp,
+            'content': data
+        };
+        socket.emit(path + ':send_draw',JSON.stringify(msg));
+    };
+    var pickColor = [0, 0, 0, 255];
+    $('.color').on('click', function (e){
+        $('.color-clicked').removeClass('color-clicked');
+        $(this).addClass('color-clicked');
+        var val = JSON.parse($(this).attr('value'));
+        if ($(".tools-clicked")[0].id != "eraser"){
+            cp.Color = val
+        }
+        pickColor = val;
+
+    });
+    $('.tool').on('click',function (e){
+        $('.tools-clicked').removeClass('tools-clicked');
+        $(this).addClass('tools-clicked');
+    });
+    $("#eraser").on('click', function (e){
+        cp.Color = cp.Drawer.backcolor;
+    });
+    $("#pen").on('click', function (e){
+        cp.Color = pickColor;
+    })
+    </script>
+{% endblock %}
